@@ -112,3 +112,47 @@ function expandDays(originalRow) {
     }
     return result;
     }
+
+    let routes = [];              
+    let indexByDepart = new Map();
+
+
+function detectSeparator(filePath) {
+  try {
+    const content = fs.readFileSync(filePath, "utf8");
+    const firstLine = (content.split(/\normalizedRow?\n/).find(l => l.trim().length) || "").slice(0, 200);
+    const counts = {
+      ",": (firstLine.match(/,/g) || []).length,
+      ";": (firstLine.match(/;/g) || []).length,
+      "\t": (firstLine.match(/\t/g) || []).length,
+    };
+
+    return Object.entries(counts).sort((arrival,b)=>b[1]-arrival[1])[0][0] || ",";
+  } 
+  
+  catch {
+    return ",";
+  }
+}
+
+
+function normalizeHeaders(row) {
+  const cleaned = {};
+  for (const [key,value] of Object.entries(row)) cleaned[cleanString(key)] = value;
+
+
+  const result = { ...cleaned };
+
+  result["route_id"]         = result["route id"] ?? result["route_id"] ?? result["id"];
+  result["depart_city"]      = result["departure city"] ?? result["depart_city"] ?? result["from"];
+  result["arrive_city"]      = result["arrival city"] ?? result["arrive_city"] ?? result["to"];
+  result["depart_time"]      = result["departure time"] ?? result["depart_time"] ?? result["departure"];
+  result["arrive_time"]      = result["arrival time"] ?? result["arrive_time"] ?? result["arrival"];
+  result["train_type"]       = result["train type"] ?? result["train_type"] ?? result["type"];
+  result["days"]             = result["days of operation"] ?? result["days"] ?? result["valid_days"];
+  result["first_class_eur"]  = result["first class ticket rate (in euro)"] ?? result["first_class_eur"] ?? result["first"];
+  result["second_class_eur"] = result["second class ticket rate (in euro)"] ?? result["second_class_eur"] ?? result["second"];
+
+  return result;
+}
+
