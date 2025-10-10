@@ -4,6 +4,112 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Train Search</title>
+   <style>
+
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
+  color: #333;
+  margin: 0;
+  padding: 20px;
+}
+
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+
+header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+input, select, button {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+button {
+  background-color: #4CAF50;
+  color: white;
+  cursor: pointer;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+
+.results {
+  margin-top: 20px;
+}
+
+.card {
+  background: white;
+  border: 1px solid #ddd;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+
+.card .route {
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+
+.card .info {
+  margin-bottom: 10px;
+}
+
+.card .info div {
+  margin-bottom: 5px;
+}
+
+.card .price {
+  font-weight: bold;
+  color: #4CAF50;
+  margin-top: 10px;
+}
+
+.card .price strong {
+  font-size: 16px;
+}
+
+.empty {
+  text-align: center;
+  color: #777;
+  padding: 20px 10px;
+}
+
+
+@media (max-width: 600px) {
+  form {
+    width: 100%;
+  }
+
+  input, select, button {
+    width: 100%;
+  }
+}
+
+
+  </style>
 </head>
 
 <body>
@@ -67,7 +173,7 @@
   </div>
   
 
-  
+
   <script>
 
     const API_BASE = "http://localhost:3001";
