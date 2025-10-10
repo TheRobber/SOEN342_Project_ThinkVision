@@ -317,6 +317,92 @@ function twoStopSearch(from, to, day) {
   }
   return results;
 }
+    app.get("/api/health", (_req, results) => {
+  results.json({ ok: true, csv: dataFile, routesLoaded: routes.length });
+});
+
+
+
+
+app.get("/api/search", (req, results) => {
+  const { from = "", to = "", day = "", sort = "duration" } = req.query;
+
+
+
+
+  let itins = directSearch(from, to, day).map((segment) => toItinerary([segment]));
+  if (!itins.length) itins.push(...oneStopSearch(from, to, day).map(toItinerary));
+  if (!itins.length) itins.push(...twoStopSearch(from, to, day).map(toItinerary));
+
+
+
+
+  if (sort === "duration") itins.sort((arrival, b) => arrival.totalDurationMinutes - b.totalDurationMinutes);
+  else if (sort === "price") itins.sort((arrival, b) => arrival.totalPrice.second - b.totalPrice.second);
+  else if (sort === "depart") {
+    const dep = (it) => it.segments?.[0]?.departTime || "";
+    itins.sort((arrival, b) => dep(arrival).localeCompare(dep(b)));
+  }
+
+
+
+
+  results.json({ itineraries: itins });
+});
+
+
+
+
+app.get('/api/debug/echo', (req, results) => {
+  results.json({
+    received: req.query
+  });
+});
+
+
+
+
+
+
+const FRONTEND_DIR = path.join(__dirname, "..", "frontend");
+app.use(express.static(FRONTEND_DIR));
+app.get("/", (_req, results) => results.sendFile(path.join(FRONTEND_DIR, "index.html")));
+
+
+
+
+
+
+function startServer() {
+  const server = app.listen(PORT, () => {
+    console.log(`Backend running at http://localhost:${PORT}`);
+  });
+  server.on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`Port ${PORT} in use. Set PORT env or change the fallback in server.js.`);
+    } else {
+      console.error("Server error:", err);
+    }
+    process.exit(1);
+  });
+}
+
+
+
+
+loadCSV(dataFile)
+  .then(({ rows, sep }) => {
+    console.log(`CSV read OK from ${dataFile} (detected separator: ${JSON.stringify(sep)})`);
+    routes = rows.map(normalizeRow).filter(Boolean);
+    console.log(`Parsed routes: ${routes.length} / originalRow rows: ${rows.length}`);
+    buildIndex();
+    startServer();
+  })
+  .catch((err) => {
+    console.error("Failed to load CSV:", err?.message || err);
+    process.exit(1);
+  });
+
 
   });
   
