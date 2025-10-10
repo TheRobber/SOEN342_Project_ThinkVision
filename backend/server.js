@@ -156,3 +156,57 @@ function normalizeHeaders(row) {
   return result;
 }
 
+function normalizeRow(originalRow) {
+  const normalizedRow = normalizeHeaders(originalRow);
+
+
+  const row = {
+    routeId: normalizedRow["route_id"]?.toString().trim(),
+    from: normalizedRow["depart_city"]?.toString().trim(),
+    arriveCity: normalizedRow["arrive_city"]?.toString().trim(),
+    departTime: normalizedRow["depart_time"]?.toString().trim(),
+    arriveTime: normalizedRow["arrive_time"]?.toString().trim(),
+    trainType: normalizedRow["train_type"]?.toString().trim(),
+    days: expandDays(normalizedRow["days"]),
+    price: {
+      first: Number(normalizedRow["first_class_eur"]) || 0,
+      second: Number(normalizedRow["second_class_eur"]) || 0,
+    },
+  };
+
+  if (!nonEmpty(row.from) || !nonEmpty(row.arriveCity)) return null;
+  if (!nonEmpty(row.departTime) || !nonEmpty(row.arriveTime)) return null;
+
+  return row;
+}
+
+
+
+function buildIndex() {
+  indexByDepart = new Map();
+  for (const normalizedRow of routes) {
+
+    const key = cleanString(normalizedRow.from);
+    if (!indexByDepart.has(key)) indexByDepart.set(key, []);
+    indexByDepart.get(key).push(normalizedRow);
+  }
+}
+
+
+
+function loadCSV(filePath) {
+  return new Promise((resolve, reject) => {
+
+    if (!fs.existsSync(filePath)) return reject(new Error(`CSV not found at: ${filePath}`));
+
+    const sep = detectSeparator(filePath);
+    const rows = [];
+
+    fs.createReadStream(filePath, "utf8")
+      .pipe(csv({ separator: sep }))
+      .on("data", (row) => rows.push(row))
+      .on("end", () => resolve({ rows, sep }))
+      .on("error", reject);
+  });
+}
+
