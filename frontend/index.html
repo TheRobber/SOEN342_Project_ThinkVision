@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Train Search</title>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <div class="muted" id="status">Think Vision Train Connection Services</div>
+    </header>
+
+
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Search</div>
+        <div class="muted" id="count">0 itineraries</div>
+      </div>
+      <div class="panel-body">
+        <div id="msg" class="error" style="display:none;"></div>
+        <form id="searchForm" class="grid">
+          <div class="field span-4">
+            <label for="from">From</label>
+            <input id="from" name="from" type="text" placeholder="e.g., Paris" />
+          </div>
+          <div class="field span-4">
+            <label for="to">To</label>
+            <input id="to" name="to" type="text" placeholder="e.g., Berlin" />
+          </div>
+          <div class="field span-2">
+            <label for="day">Day</label>
+            <select id="day" name="day">
+              <option value="">Any</option>
+              <option>MON</option><option>TUE</option><option>WED</option>
+              <option>THU</option><option>FRI</option><option>SAT</option><option>SUN</option>
+            </select>
+          </div>
+          <div class="field span-2">
+            <label for="sort">Sort by</label>
+            <select id="sort" name="sort">
+              <option value="duration">Shortest duration</option>
+              <option value="price">Lowest 2nd class price</option>
+              <option value="depart">Earliest departure</option>
+            </select>
+          </div>
+          <div class="field span-12">
+            <button id="searchButton" type="submit">Search</button>
+            <button id="resetButton" type="button" class="secondary" style="margin-left:8px;">Reset</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Results</div>
+      </div>
+      <div class="panel-body">
+        <div id="results" class="results">
+          <div class="empty">Enter a query and press Search.</div>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
