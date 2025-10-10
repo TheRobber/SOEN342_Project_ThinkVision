@@ -65,5 +65,180 @@
       </div>
     </section>
   </div>
+  
+
+  
+  <script>
+
+    const API_BASE = "http://localhost:3001";
+
+
+    const $ = (sel) => document.querySelector(sel);
+
+
+    const minutesToTime = (mins) => {
+      mins = Math.max(0, Number(mins) || 0);
+      const hours = Math.floor(mins / 60);
+      const minutes = mins % 60;
+      return `${hours}hours ${String(minutes).padStart(2, "0")}minutes`;
+    };
+
+
+    function formatLayover(mins) {
+      mins = Math.max(0, Number(mins) || 0);
+      const hours = Math.floor(mins / 60);
+      const minutes = mins % 60;
+      return `${hours}hours ${String(minutes).padStart(2, "0")}minutes`;
+    }
+
+
+    const stopsLabel = (segments) => {
+      const totalStops = (segments?.length || 1) - 1;
+      if (totalStops <= 0) return "Direct";
+      if (totalStops === 1) return "1 stop";
+      return `${totalStops} stops`;
+    };
+
+
+    function renderResults(itins) {
+      const results = $("#results");
+      const countEl = $("#count");
+      results.innerHTML = "";
+
+
+      if (!Array.isArray(itins) || itins.length === 0) {
+        results.innerHTML = '<div class="empty">No results found.</div>';
+        countEl.textContent = "0 itineraries";
+        return;
+      }
+
+
+      countEl.textContent = `${itins.length} itinerar${itins.length > 1 ? "ies" : "y"}`;
+
+
+      itins.forEach((it) => {
+        const segs = it.segments || [];
+        const first = segs[0] || {};
+        const last  = segs[segs.length - 1] || {};
+        const layovers = (it.transferTimes || []).map((t) => `${t}minutes`).join(", ") || "—";
+
+
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="card-head">
+            <div class="route">${first.from || "?"} → ${last.arriveCity || "?"}</div>
+            <div class="total">
+              <div>Duration: <strong>${minutesToTime(it.totalDurationMinutes)}</strong></div>
+              <div>${stopsLabel(segs)}</div>
+              <div>Layovers: <strong>${layovers}</strong></div>
+              <div>2nd class total: <span class="price">€${(it.totalPrice?.second ?? 0)}</span></div>
+              <div>1st class total: <span class="price-1st">€${(it.totalPrice?.first ?? 0)}</span></div>
+            </div>
+          </div>
+          <div class="panel-body">
+            <table class="seg-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Route ID</th>
+                  <th>From</th>
+                  <th>To</th>
+                  <th>Depart</th>
+                  <th>Arrive</th>
+                  <th>Type</th>
+                  <th>1st (€)</th>
+                  <th>2nd (€)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${segs.map((segment, index) => `
+                  <tr>
+                    <td>${index + 1}</td>
+                    <td>${segment.routeId ?? ""}</td>
+                    <td>${segment.from ?? ""}</td>
+                    <td>${segment.arriveCity ?? ""}</td>
+                    <td>${segment.departTime ?? ""}</td>
+                    <td>${segment.arriveTime ?? ""}</td>
+                    <td>${segment.trainType ?? ""}</td>
+                    <td>${segment.price?.first ?? ""}</td>
+                    <td>${segment.price?.second ?? ""}</td>
+                  </tr>
+                  ${
+                    index < segs.length - 1
+                      ? `<tr class="layover"><td colspan="9">Time to change connection at <strong>${segment.arriveCity ?? "transfer"}</strong>: ${formatLayover(it.transferTimes?.[index])}</td></tr>`
+                      : ""
+                  }
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        `;
+        results.appendChild(card);
+      });
+    }
+
+
+    async function doSearch(params) {
+      const msg = $("#msg");
+      const status = $("#status");
+      msg.style.display = "none";
+      status.textContent = "Searching…";
+      try {
+        const queryString = new URLSearchParams(params);
+        const response = await fetch(`${API_BASE}/api/search?${queryString.toString()}`, { headers: { "Accept": "application/json" } });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        status.textContent = `Found ${data.itineraries?.length ?? 0} result(s)`;
+        return data;
+      } catch (err) {
+        status.textContent = "Search failed";
+        msg.textContent = `Error: ${err.message || err}`;
+        msg.style.display = "block";
+        return { itineraries: [] };
+      }
+    }
+
+
+    $("#searchForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const from = $("#from").value.trim();
+      const to   = $("#to").value.trim();
+      const day  = $("#day").value;            // "" (Any) or MON..SUN
+      const sort = $("#sort").value || "duration";
+
+
+      const msg = $("#msg");
+      msg.style.display = "none";
+
+
+      if (!from || !to) {
+        msg.textContent = "Please enter both 'From' and 'To' cities.";
+        msg.style.display = "block";
+        return;
+      }
+
+
+      $("#searchButton").disabled = true;
+      const { itineraries, error } = await doSearch({ from, to, day, sort, class: "second" });
+      $("#searchButton").disabled = false;
+
+
+      if (error) {
+        msg.textContent = error;
+        msg.style.display = "block";
+      }
+      renderResults(itineraries || []);
+    });
+
+
+    $("#resetButton").addEventListener("click", () => {
+      $("#searchForm").reset();
+      $("#status").textContent = "Think Vision Train Connection Services";
+      $("#count").textContent = "0 itineraries";
+      $("#results").innerHTML = '<div class="empty">Enter a query and press Search.</div>';
+      $("#msg").style.display = "none";
+    });
+  </script>
 </body>
 </html>
