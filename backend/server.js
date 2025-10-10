@@ -91,7 +91,9 @@ function expandDays(originalRow) {
 
 
         if (start <= end) {
-            for (let i = start; i <= end; i++) if (!result.includes(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i])) result.push(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]);
+            for (let i = start; i <= end; i++)
+                 if (!result.includes(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i])) 
+                    result.push(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]);
         } else {
         
             for (let i = start; i < start + 7; i++) {
