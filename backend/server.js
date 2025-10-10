@@ -203,6 +203,122 @@ function loadCSV(filePath) {
       .on("data", (row) => rows.push(row))
       .on("end", () => resolve({ rows, sep }))
       .on("error", reject);
+
+    function timeToMinutes(time) {
+  const [hours, minutes] = (time || "").split(":").map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return 0;
+  return hours * 60 + minutes;
+}
+function segmentDurationMinutes(segment) {
+  const departure = timeToMinutes(segment.departTime);
+  const arrival = timeToMinutes(segment.arriveTime);
+  return arrival >= departure ? arrival - departure : arrival + 24 * 60 - departure;
+}
+function transferMinutes(prev, next) {
+  const arrival = timeToMinutes(prev.arriveTime);
+  const departure = timeToMinutes(next.departTime);
+  const originalRow = departure - arrival;
+  return originalRow >= 0 ? originalRow : originalRow + 24 * 60;  
+}
+function sumPrice(segments) {
+  return segments.reduce(
+    (total, segment) => ({
+      first: total.first + (segment.price.first || 0),
+      second: total.second + (segment.price.second || 0),
+    }),
+    { first: 0, second: 0 }
+  );
+}
+function toItinerary(segments) {
+  const transfers = [];
+  let duration = 0;
+  for (let i = 0; i < segments.length; i++) {
+    duration += segmentDurationMinutes(segments[i]);
+    if (i < segments.length - 1) transfers.push(transferMinutes(segments[i], segments[i + 1]));
+  }
+  duration += transfers.reduce((arrival, b) => arrival + b, 0);
+  return {
+    id: segments.map((segment) => segment.routeId).join("+"),
+    totalDurationMinutes: duration,
+    totalPrice: sumPrice(segments),
+    transferTimes: transfers,
+    segments,
+  };
+}
+function matchesDay(segment, day) {
+  return !nonEmpty(day) || segment.days.includes(day.toUpperCase());
+}
+function getStartList(from) {
+  const cleanedCity = cleanString(from);
+  if (!cleanedCity) return [];
+  const exact = indexByDepart.get(cleanedCity) || [];
+  if (exact.length) return exact;
+  return routes.filter((normalizedRow) => cleanString(normalizedRow.from).includes(cleanedCity));
+}
+
+
+
+
+
+
+function directSearch(from, to, day) {
+  const startList = getStartList(from);
+  const cleanedArrival = cleanString(to);
+  return startList.filter(
+    (normalizedRow) => cleanString(normalizedRow.arriveCity).includes(cleanedArrival) && matchesDay(normalizedRow, day)
+  );
+}
+function oneStopSearch(from, to, day) {
+  const results = [];
+  const cleanedArrival = cleanString(to);
+  const startList = getStartList(from);
+  for (const firstRoute of startList) {
+    const midCity = cleanString(firstRoute.arriveCity);
+    const options = indexByDepart.get(midCity) || routes.filter(normalizedRow => cleanString(normalizedRow.from) === midCity);
+    for (const secondRoute of options) {
+      if (
+        cleanString(secondRoute.arriveCity).includes(cleanedArrival) &&
+        matchesDay(firstRoute, day) &&
+        matchesDay(secondRoute, day) &&
+        transferMinutes(firstRoute, secondRoute) >= minTransferTime
+      ) {
+        results.push([firstRoute, secondRoute]);
+      }
+    }
+  }
+  return results;
+}
+function twoStopSearch(from, to, day) {
+  const results = [];
+  const cleanedArrival = cleanString(to);
+  const startList = getStartList(from);
+  for (const firstRoute of startList) {
+    const firstMidCity = cleanString(firstRoute.arriveCity);
+    const connectingRoutes1 = indexByDepart.get(firstMidCity) || routes.filter(normalizedRow => cleanString(normalizedRow.from) === firstMidCity);
+    for (const secondRoute of connectingRoutes1) {
+      if (!matchesDay(firstRoute, day) || !matchesDay(secondRoute, day)) continue;
+      if (transferMinutes(firstRoute, secondRoute) < minTransferTime) continue;
+
+
+
+
+      const secondMidCity = cleanString(secondRoute.arriveCity);
+      const connectingRoutes2 = indexByDepart.get(secondMidCity) || routes.filter(normalizedRow => cleanString(normalizedRow.from) === secondMidCity);
+      for (const thirdRoute of connectingRoutes2) {
+        if (
+          cleanString(thirdRoute.arriveCity).includes(cleanedArrival) &&
+          matchesDay(thirdRoute, day) &&
+          transferMinutes(secondRoute, thirdRoute) >= minTransferTime
+        ) {
+          results.push([firstRoute, secondRoute, thirdRoute]);
+        }
+      }
+    }
+  }
+  return results;
+}
+
   });
+  
 }
 
