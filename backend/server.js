@@ -177,7 +177,6 @@ function normalizeRow(originalRow) {
 }
 
 
-
 function buildIndex() {
   indexByDepart = new Map();
   for (const normalizedRow of routes) {
@@ -189,20 +188,19 @@ function buildIndex() {
 }
 
 
-
 function loadCSV(filePath) {
   return new Promise((resolve, reject) => {
-
     if (!fs.existsSync(filePath)) return reject(new Error(`CSV not found at: ${filePath}`));
-
     const sep = detectSeparator(filePath);
     const rows = [];
-
     fs.createReadStream(filePath, "utf8")
       .pipe(csv({ separator: sep }))
       .on("data", (row) => rows.push(row))
       .on("end", () => resolve({ rows, sep }))
       .on("error", reject);
+  });
+}
+
 
     function timeToMinutes(time) {
   const [hours, minutes] = (time || "").split(":").map(Number);
@@ -258,9 +256,6 @@ function getStartList(from) {
 
 
 
-
-
-
 function directSearch(from, to, day) {
   const startList = getStartList(from);
   const cleanedArrival = cleanString(to);
@@ -301,7 +296,6 @@ function twoStopSearch(from, to, day) {
 
 
 
-
       const secondMidCity = cleanString(secondRoute.arriveCity);
       const connectingRoutes2 = indexByDepart.get(secondMidCity) || routes.filter(normalizedRow => cleanString(normalizedRow.from) === secondMidCity);
       for (const thirdRoute of connectingRoutes2) {
@@ -322,19 +316,14 @@ function twoStopSearch(from, to, day) {
 });
 
 
-
-
 app.get("/api/search", (req, results) => {
   const { from = "", to = "", day = "", sort = "duration" } = req.query;
-
 
 
 
   let itins = directSearch(from, to, day).map((segment) => toItinerary([segment]));
   if (!itins.length) itins.push(...oneStopSearch(from, to, day).map(toItinerary));
   if (!itins.length) itins.push(...twoStopSearch(from, to, day).map(toItinerary));
-
-
 
 
   if (sort === "duration") itins.sort((arrival, b) => arrival.totalDurationMinutes - b.totalDurationMinutes);
@@ -345,12 +334,8 @@ app.get("/api/search", (req, results) => {
   }
 
 
-
-
   results.json({ itineraries: itins });
 });
-
-
 
 
 app.get('/api/debug/echo', (req, results) => {
@@ -362,13 +347,9 @@ app.get('/api/debug/echo', (req, results) => {
 
 
 
-
-
 const FRONTEND_DIR = path.join(__dirname, "..", "frontend");
 app.use(express.static(FRONTEND_DIR));
 app.get("/", (_req, results) => results.sendFile(path.join(FRONTEND_DIR, "index.html")));
-
-
 
 
 
@@ -389,7 +370,6 @@ function startServer() {
 
 
 
-
 loadCSV(dataFile)
   .then(({ rows, sep }) => {
     console.log(`CSV read OK from ${dataFile} (detected separator: ${JSON.stringify(sep)})`);
@@ -404,7 +384,7 @@ loadCSV(dataFile)
   });
 
 
-  });
   
-}
+  
+
 
