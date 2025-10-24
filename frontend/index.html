@@ -4,111 +4,245 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Train Search</title>
-   <style>
 
-body {
-  font-family: Arial, sans-serif;
-  background: #f4f4f4;
-  color: #333;
-  margin: 0;
-  padding: 20px;
-}
-
-
-.container {
-  max-width: 800px;
-  margin: 0 auto;
-}
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+    }
 
 
-header {
-  text-align: center;
-  margin-bottom: 20px;
-}
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
 
 
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-input, select, button {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-button {
-  background-color: #4CAF50;
-  color: white;
-  cursor: pointer;
-}
-
-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
 
 
-.results {
-  margin-top: 20px;
-}
-
-.card {
-  background: white;
-  border: 1px solid #ddd;
-  padding: 15px;
-  margin-bottom: 10px;
-  border-radius: 8px;
-  background-color: #fff;
-}
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
 
 
-.card .route {
-  font-weight: bold;
-  font-size: 16px;
-  margin-bottom: 8px;
-}
+    input, select, button {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
 
 
-.card .info {
-  margin-bottom: 10px;
-}
-
-.card .info div {
-  margin-bottom: 5px;
-}
-
-.card .price {
-  font-weight: bold;
-  color: #4CAF50;
-  margin-top: 10px;
-}
-
-.card .price strong {
-  font-size: 16px;
-}
-
-.empty {
-  text-align: center;
-  color: #777;
-  padding: 20px 10px;
-}
+    button {
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
 
 
-@media (max-width: 600px) {
-  form {
-    width: 100%;
-  }
-
-  input, select, button {
-    width: 100%;
-  }
-}
+    button.secondary {
+      background-color: #777;
+    }
 
 
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+
+    .results {
+      margin-top: 20px;
+    }
+
+
+    .card {
+      background: white;
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      background-color: #fff;
+    }
+
+
+    .card .route {
+      font-weight: bold;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+
+    .card .info {
+      margin-bottom: 10px;
+    }
+
+
+    .card .info div {
+      margin-bottom: 5px;
+    }
+
+
+    .card .price {
+      font-weight: bold;
+      color: #4CAF50;
+      margin-top: 10px;
+    }
+
+
+    .card .price strong {
+      font-size: 16px;
+    }
+
+
+    .empty {
+      text-align: center;
+      color: #777;
+      padding: 20px 10px;
+    }
+
+
+    table.seg-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+
+
+    table.seg-table th,
+    table.seg-table td {
+      border: 1px solid #ccc;
+      padding: 6px;
+      text-align: left;
+    }
+
+
+    tr.layover td {
+      background: #fafafa;
+      font-style: italic;
+      color: #555;
+    }
+
+
+    /* Booking form styling inside card */
+    .booking-section {
+      margin-top: 15px;
+      padding-top: 10px;
+      border-top: 1px solid #ddd;
+    }
+
+
+    .booking-passenger-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+      background: #f9f9f9;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 8px;
+    }
+
+
+    .booking-passenger-row input {
+      flex: 1 1 120px;
+    }
+
+
+    .booking-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+
+    .small-note {
+      font-size: 12px;
+      color: #555;
+    }
+
+
+    
+    .trip-card {
+      background: white;
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+    }
+
+
+    .trip-header {
+      font-weight: bold;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+
+
+    .ticket-line {
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+
+    .muted {
+      color: #777;
+      font-size: 13px;
+    }
+
+
+    .panel {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      padding: 15px;
+    }
+
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
+    }
+
+
+    .panel-title {
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+
+    .panel-body .error {
+      color: #c00;
+      background: #fee;
+      border: 1px solid #c99;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    @media (max-width: 600px) {
+      form {
+        width: 100%;
+      }
+      input, select, button {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 
@@ -160,6 +294,7 @@ button:disabled {
     </section>
 
 
+    
     <section class="panel">
       <div class="panel-header">
         <div class="panel-title">Results</div>
@@ -170,8 +305,38 @@ button:disabled {
         </div>
       </div>
     </section>
+
+
+    
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">View My Trips</div>
+        <div class="muted small-note">View current & past trips</div>
+      </div>
+      <div class="panel-body">
+        <div id="tripMsg" class="error" style="display:none;"></div>
+        <form id="tripsForm">
+          <div class="field span-6">
+            <label for="tripLastName">Last Name</label>
+            <input id="tripLastName" type="text" placeholder="e.g., Smith" />
+          </div>
+          <div class="field span-6">
+            <label for="tripIdNumber">ID Number</label>
+            <input id="tripIdNumber" type="text" placeholder="e.g., A1234567" />
+          </div>
+          <div class="field span-12" style="margin-top:10px;">
+            <button id="tripsButton" type="submit">Find My Trips</button>
+          </div>
+        </form>
+
+
+        <div id="tripsResults" class="results" style="margin-top:20px;">
+          <div class="empty">No trips loaded.</div>
+        </div>
+      </div>
+    </section>
   </div>
-  
+
 
 
   <script>
