@@ -344,6 +344,89 @@ app.get('/api/debug/echo', (req, results) => {
   });
 });
 
+let tripsStore = [];
+let tripCounter = 1;
+let ticketCounter = 1;
+
+
+function makeTripId() {
+  const id = "TRIP-" + tripCounter.toString(36).toUpperCase();
+  tripCounter += 1;
+  return id;
+}
+
+
+function makeTicketId() {
+  const id = ticketCounter;
+  ticketCounter += 1;
+  return id;
+}
+
+
+
+
+function summarizeConnection(conn) {
+  if (!conn || !conn.segments || !conn.segments.length) return "";
+  const first = conn.segments[0];
+  const last = conn.segments[conn.segments.length - 1];
+  return `${first?.from || "?"} → ${last?.arriveCity || "?"} (${first?.departTime || "?"} - ${last?.arriveTime || "?"})`;
+}
+
+
+
+
+app.post("/api/book", (req, res) => {
+  const { connection, travellers } = req.body || {};
+
+
+  if (!connection || !Array.isArray(connection.segments) || connection.segments.length === 0) {
+    return res.status(400).json({ error: "Missing or invalid connection." });
+  }
+  if (!Array.isArray(travellers) || travellers.length === 0) {
+    return res.status(400).json({ error: "At least one traveller required." });
+  }
+
+
+
+
+  const reservations = travellers.map((t) => {
+    return {
+      firstName: t.firstName?.toString().trim() || "",
+      lastName: t.lastName?.toString().trim() || "",
+      age: Number(t.age) || 0,
+      idNumber: t.idNumber?.toString().trim() || "",
+      ticket: {
+        ticketId: makeTicketId()
+      }
+    };
+  });
+
+
+  const tripId = makeTripId();
+
+
+  const trip = {
+    tripId,
+    createdAt: Date.now(),
+    connection,
+    connectionSummary: summarizeConnection(connection),
+    reservations
+  };
+
+
+  tripsStore.push(trip);
+
+
+ 
+  res.json({
+    ok: true,
+    tripId,
+    reservationsCount: reservations.length,
+    reservations
+  });
+});
+
+
 
 
 
