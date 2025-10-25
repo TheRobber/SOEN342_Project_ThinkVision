@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Train Search</title>
-
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -14,25 +13,21 @@
       padding: 20px;
     }
 
-
     .container {
       max-width: 800px;
       margin: 0 auto;
     }
-
 
     header {
       text-align: center;
       margin-bottom: 20px;
     }
 
-
     form {
       display: flex;
       flex-direction: column;
       gap: 10px;
     }
-
 
     input, select, button {
       padding: 8px;
@@ -41,29 +36,24 @@
       font-size: 14px;
     }
 
-
     button {
       background-color: #4CAF50;
       color: white;
       cursor: pointer;
     }
 
-
     button.secondary {
       background-color: #777;
     }
-
 
     button:disabled {
       background-color: #ccc;
       cursor: not-allowed;
     }
 
-
     .results {
       margin-top: 20px;
     }
-
 
     .card {
       background: white;
@@ -74,23 +64,19 @@
       background-color: #fff;
     }
 
-
     .card .route {
       font-weight: bold;
       font-size: 16px;
       margin-bottom: 8px;
     }
 
-
     .card .info {
       margin-bottom: 10px;
     }
 
-
     .card .info div {
       margin-bottom: 5px;
     }
-
 
     .card .price {
       font-weight: bold;
@@ -98,18 +84,15 @@
       margin-top: 10px;
     }
 
-
     .card .price strong {
       font-size: 16px;
     }
-
 
     .empty {
       text-align: center;
       color: #777;
       padding: 20px 10px;
     }
-
 
     table.seg-table {
       width: 100%;
@@ -118,7 +101,6 @@
       margin-top: 10px;
     }
 
-
     table.seg-table th,
     table.seg-table td {
       border: 1px solid #ccc;
@@ -126,21 +108,17 @@
       text-align: left;
     }
 
-
     tr.layover td {
       background: #fafafa;
       font-style: italic;
       color: #555;
     }
 
-
-    /* Booking form styling inside card */
     .booking-section {
       margin-top: 15px;
       padding-top: 10px;
       border-top: 1px solid #ddd;
     }
-
 
     .booking-passenger-row {
       display: flex;
@@ -153,11 +131,9 @@
       padding: 8px;
     }
 
-
     .booking-passenger-row input {
       flex: 1 1 120px;
     }
-
 
     .booking-actions {
       display: flex;
@@ -166,14 +142,11 @@
       margin-top: 10px;
     }
 
-
     .small-note {
       font-size: 12px;
       color: #555;
     }
 
-
-    
     .trip-card {
       background: white;
       border: 1px solid #ddd;
@@ -182,25 +155,21 @@
       border-radius: 8px;
     }
 
-
     .trip-header {
       font-weight: bold;
       margin-bottom: 8px;
       font-size: 15px;
     }
 
-
     .ticket-line {
       font-size: 13px;
       margin-bottom: 4px;
     }
 
-
     .muted {
       color: #777;
       font-size: 13px;
     }
-
 
     .panel {
       background: white;
@@ -210,7 +179,6 @@
       padding: 15px;
     }
 
-
     .panel-header {
       display: flex;
       justify-content: space-between;
@@ -218,12 +186,10 @@
       margin-bottom: 10px;
     }
 
-
     .panel-title {
       font-size: 16px;
       font-weight: bold;
     }
-
 
     .panel-body .error {
       color: #c00;
@@ -252,7 +218,7 @@
       <div class="muted" id="status">Think Vision Train Connection Services</div>
     </header>
 
-
+   
     <section class="panel">
       <div class="panel-header">
         <div class="panel-title">Search</div>
@@ -293,7 +259,6 @@
       </div>
     </section>
 
-
     
     <section class="panel">
       <div class="panel-header">
@@ -305,7 +270,6 @@
         </div>
       </div>
     </section>
-
 
     
     <section class="panel">
@@ -329,7 +293,6 @@
           </div>
         </form>
 
-
         <div id="tripsResults" class="results" style="margin-top:20px;">
           <div class="empty">No trips loaded.</div>
         </div>
@@ -337,15 +300,10 @@
     </section>
   </div>
 
-
-
   <script>
-
     const API_BASE = "http://localhost:3001";
 
-
     const $ = (sel) => document.querySelector(sel);
-
 
     const minutesToTime = (mins) => {
       mins = Math.max(0, Number(mins) || 0);
@@ -354,14 +312,12 @@
       return `${hours}hours ${String(minutes).padStart(2, "0")}minutes`;
     };
 
-
     function formatLayover(mins) {
       mins = Math.max(0, Number(mins) || 0);
       const hours = Math.floor(mins / 60);
       const minutes = mins % 60;
       return `${hours}hours ${String(minutes).padStart(2, "0")}minutes`;
     }
-
 
     const stopsLabel = (segments) => {
       const totalStops = (segments?.length || 1) - 1;
@@ -370,12 +326,129 @@
       return `${totalStops} stops`;
     };
 
+    
+    function createPassengerRow() {
+      const row = document.createElement("div");
+      row.className = "booking-passenger-row";
+      row.innerHTML = `
+        <input class="p-last" type="text" placeholder="Last Name" />
+        <input class="p-first" type="text" placeholder="First Name" />
+        <input class="p-age" type="number" min="0" placeholder="Age" style="max-width:70px;" />
+        <input class="p-id" type="text" placeholder="Government ID / Passport" />
+        <button type="button" class="secondary remove-passenger" style="flex:0 0 auto;">Remove</button>
+      `;
+      row.querySelector(".remove-passenger").addEventListener("click", () => {
+        row.remove();
+      });
+      return row;
+    }
 
+    function buildBookingSection(itinerary) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "booking-section";
+
+      const tripInfoId = itinerary.id || "";
+      wrapper.innerHTML = `
+        <div style="font-weight:bold; margin-bottom:8px;">Book this trip</div>
+        <div class="small-note" style="margin-bottom:10px;">
+          Add each traveller (name, age, ID). 1 ticket will be created per traveller.
+        </div>
+        <div class="passenger-list"></div>
+        <div class="booking-actions">
+          <button type="button" class="add-passenger-btn">Add Traveller</button>
+          <button type="button" class="submit-booking-btn">Confirm Booking</button>
+          <div class="booking-status small-note" style="flex-basis:100%;"></div>
+        </div>
+        <input type="hidden" class="itinerary-id" value="${tripInfoId}">
+      `;
+
+      const listEl = wrapper.querySelector(".passenger-list");
+      const addBtn = wrapper.querySelector(".add-passenger-btn");
+      const submitBtn = wrapper.querySelector(".submit-booking-btn");
+      const statusEl = wrapper.querySelector(".booking-status");
+
+      
+      listEl.appendChild(createPassengerRow());
+
+      addBtn.addEventListener("click", () => {
+        listEl.appendChild(createPassengerRow());
+      });
+
+      submitBtn.addEventListener("click", async () => {
+        statusEl.textContent = "";
+
+        
+        const rows = listEl.querySelectorAll(".booking-passenger-row");
+        const travellers = [];
+        rows.forEach(r => {
+          const lastName = r.querySelector(".p-last").value.trim();
+          const firstName = r.querySelector(".p-first").value.trim();
+          const age = r.querySelector(".p-age").value.trim();
+          const govId = r.querySelector(".p-id").value.trim();
+          if (lastName && firstName && govId) {
+            travellers.push({
+              firstName,
+              lastName,
+              age: Number(age) || 0,
+              idNumber: govId
+            });
+          }
+        });
+
+        if (!travellers.length) {
+          statusEl.textContent = "Please enter at least one traveller with name and ID.";
+          return;
+        }
+
+        // booking to backend
+        try {
+          const resp = await fetch(`${API_BASE}/api/book`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            body: JSON.stringify({
+              connection: itinerary,     
+              travellers
+            })
+          });
+
+          if (!resp.ok) {
+            statusEl.textContent = "Booking failed.";
+            return;
+          }
+
+          const data = await resp.json();
+          if (data && data.tripId) {
+            const ticketLines = (data.reservations || []).map((res, idx) => {
+              const tId = res.ticket && res.ticket.ticketId != null ? res.ticket.ticketId : "?";
+              const fn = res.firstName || "";
+              const ln = res.lastName || "";
+              const age = (res.age != null ? res.age : "?");
+              return `${idx + 1}. ${ln}, ${fn} (Age ${age}) — Ticket #${tId}`;
+            });
+
+            statusEl.innerHTML = `
+              Booked! Trip ID: ${data.tripId}<br/>
+              ${ticketLines.join("<br/>")}
+            `;
+          } else {
+            statusEl.textContent = "Booking received, but no tripId returned.";
+          }
+        } catch (err) {
+          statusEl.textContent = "Network error during booking.";
+        }
+      });
+
+      return wrapper;
+    }
+
+    
     function renderResults(itins) {
       const results = $("#results");
       const countEl = $("#count");
       results.innerHTML = "";
-
 
       if (!Array.isArray(itins) || itins.length === 0) {
         results.innerHTML = '<div class="empty">No results found.</div>';
@@ -383,19 +456,20 @@
         return;
       }
 
-
       countEl.textContent = `${itins.length} itinerar${itins.length > 1 ? "ies" : "y"}`;
-
 
       itins.forEach((it) => {
         const segs = it.segments || [];
         const first = segs[0] || {};
         const last  = segs[segs.length - 1] || {};
-        const layovers = (it.transferTimes || []).map((t) => `${t}minutes`).join(", ") || "—";
-
+        const layovers = (it.transferTimes || [])
+          .map((t) => `${t}minutes`)
+          .join(", ") || "—";
 
         const card = document.createElement("div");
         card.className = "card";
+
+        
         card.innerHTML = `
           <div class="card-head">
             <div class="route">${first.from || "?"} → ${last.arriveCity || "?"}</div>
@@ -445,11 +519,16 @@
             </table>
           </div>
         `;
+
+        
+        const bookingSection = buildBookingSection(it);
+        card.appendChild(bookingSection);
+
         results.appendChild(card);
       });
     }
 
-
+    
     async function doSearch(params) {
       const msg = $("#msg");
       const status = $("#status");
@@ -457,7 +536,9 @@
       status.textContent = "Searching…";
       try {
         const queryString = new URLSearchParams(params);
-        const response = await fetch(`${API_BASE}/api/search?${queryString.toString()}`, { headers: { "Accept": "application/json" } });
+        const response = await fetch(`${API_BASE}/api/search?${queryString.toString()}`, {
+          headers: { "Accept": "application/json" }
+        });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         status.textContent = `Found ${data.itineraries?.length ?? 0} result(s)`;
@@ -470,18 +551,15 @@
       }
     }
 
-
     $("#searchForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const from = $("#from").value.trim();
       const to   = $("#to").value.trim();
-      const day  = $("#day").value;            // "" (Any) or MON..SUN
+      const day  = $("#day").value;
       const sort = $("#sort").value || "duration";
-
 
       const msg = $("#msg");
       msg.style.display = "none";
-
 
       if (!from || !to) {
         msg.textContent = "Please enter both 'From' and 'To' cities.";
@@ -489,11 +567,11 @@
         return;
       }
 
-
       $("#searchButton").disabled = true;
-      const { itineraries, error } = await doSearch({ from, to, day, sort, class: "second" });
+      const { itineraries, error } = await doSearch({
+        from, to, day, sort, class: "second"
+      });
       $("#searchButton").disabled = false;
-
 
       if (error) {
         msg.textContent = error;
@@ -502,13 +580,96 @@
       renderResults(itineraries || []);
     });
 
-
     $("#resetButton").addEventListener("click", () => {
       $("#searchForm").reset();
       $("#status").textContent = "Think Vision Train Connection Services";
       $("#count").textContent = "0 itineraries";
       $("#results").innerHTML = '<div class="empty">Enter a query and press Search.</div>';
       $("#msg").style.display = "none";
+    });
+
+
+    // View Trips
+
+    function renderTrips(trips) {
+      const container = $("#tripsResults");
+      container.innerHTML = "";
+
+      if (!Array.isArray(trips) || trips.length === 0) {
+        container.innerHTML = '<div class="empty">No trips found for that passenger.</div>';
+        return;
+      }
+
+      trips.forEach((trip) => {
+        const card = document.createElement("div");
+        card.className = "trip-card";
+
+        
+        let headerHTML = `
+          <div class="trip-header">
+            Trip ID: ${trip.tripId || "?"}
+          </div>
+          <div class="small-note" style="margin-bottom:10px;">
+            Connection: ${trip.connectionSummary || ""}
+          </div>
+        `;
+
+        // reservations / tickets
+        const ticketsHTML = (trip.reservations || [])
+          .map((res, idx) => {
+            const t = res.ticket || {};
+            return `
+              <div class="ticket-line">
+                ${idx+1}. ${res.lastName || ""}, ${res.firstName || ""} (Age ${res.age ?? "?"})
+                <br/>
+                ID: ${res.idNumber || ""} |
+                Ticket #: ${t.ticketId ?? "?"}
+              </div>
+            `;
+          })
+          .join("");
+
+        card.innerHTML = headerHTML + ticketsHTML;
+
+        container.appendChild(card);
+      });
+    }
+
+    async function fetchTrips(lastName, idNumber) {
+      const tripMsg = $("#tripMsg");
+      tripMsg.style.display = "none";
+
+      try {
+        const qs = new URLSearchParams({ lastName, idNumber });
+        const resp = await fetch(`${API_BASE}/api/trips?${qs.toString()}`, {
+          headers: { "Accept": "application/json" }
+        });
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status}`);
+        }
+        const data = await resp.json();
+        renderTrips(data.trips || []);
+      } catch (err) {
+        tripMsg.textContent = `Error: ${err.message || err}`;
+        tripMsg.style.display = "block";
+      }
+    }
+
+    $("#tripsForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const lastName = $("#tripLastName").value.trim();
+      const idNumber = $("#tripIdNumber").value.trim();
+
+      if (!lastName || !idNumber) {
+        const tripMsg = $("#tripMsg");
+        tripMsg.textContent = "Please enter both last name and ID number.";
+        tripMsg.style.display = "block";
+        return;
+      }
+
+      $("#tripsButton").disabled = true;
+      await fetchTrips(lastName, idNumber);
+      $("#tripsButton").disabled = false;
     });
   </script>
 </body>
