@@ -451,6 +451,36 @@ function startServer() {
   });
 }
 
+app.get("/api/trips", (req, res) => {
+  const lastNameQ = (req.query.lastName || "").toString().trim().toLowerCase();
+  const idNumberQ = (req.query.idNumber || "").toString().trim().toLowerCase();
+
+
+  if (!lastNameQ || !idNumberQ) {
+    return res.status(400).json({ error: "Missing lastName or idNumber." });
+  }
+
+
+  const found = tripsStore.filter((trip) => {
+    return trip.reservations?.some((r) => {
+      return (
+        r.lastName?.toLowerCase() === lastNameQ &&
+        r.idNumber?.toLowerCase() === idNumberQ
+      );
+    });
+  });
+
+
+ 
+  res.json({
+    trips: found.map((t) => ({
+      tripId: t.tripId,
+      connectionSummary: t.connectionSummary,
+      reservations: t.reservations
+    }))
+  });
+});
+
 
 
 loadCSV(dataFile)
