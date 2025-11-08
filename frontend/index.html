@@ -591,48 +591,82 @@
 
     // View Trips
 
-    function renderTrips(trips) {
+    function renderTrips(currentTrips, pastTrips) {
       const container = $("#tripsResults");
       container.innerHTML = "";
 
-      if (!Array.isArray(trips) || trips.length === 0) {
+      const hasCurrentTrips = Array.isArray(currentTrips) && currentTrips.length > 0;
+      const hasPastTrips = Array.isArray(pastTrips) && pastTrips.length > 0;
+
+      if (!hasCurrentTrips && !hasPastTrips) {
         container.innerHTML = '<div class="empty">No trips found for that passenger.</div>';
         return;
       }
 
-      trips.forEach((trip) => {
-        const card = document.createElement("div");
-        card.className = "trip-card";
+      // Render Current/Future Trips
+      if (hasCurrentTrips) {
+        const currentHeader = document.createElement("div");
+        currentHeader.style.fontWeight = "bold";
+        currentHeader.style.marginTop = "10px";
+        currentHeader.style.marginBottom = "10px";
+        currentHeader.style.fontSize = "15px";
+        currentHeader.textContent = `Current & Future Trips (${currentTrips.length})`;
+        container.appendChild(currentHeader);
 
-        
-        let headerHTML = `
-          <div class="trip-header">
-            Trip ID: ${trip.tripId || "?"}
-          </div>
-          <div class="small-note" style="margin-bottom:10px;">
-            Connection: ${trip.connectionSummary || ""}
-          </div>
-        `;
+        currentTrips.forEach((trip) => {
+          container.appendChild(createTripCard(trip));
+        });
+      }
 
-        // reservations / tickets
-        const ticketsHTML = (trip.reservations || [])
-          .map((res, idx) => {
-            const t = res.ticket || {};
-            return `
-              <div class="ticket-line">
-                ${idx+1}. ${res.lastName || ""}, ${res.firstName || ""} (Age ${res.age ?? "?"})
-                <br/>
-                ID: ${res.idNumber || ""} |
-                Ticket #: ${t.ticketId ?? "?"}
-              </div>
-            `;
-          })
-          .join("");
+      // Render Past Trips (History)
+      if (hasPastTrips) {
+        const pastHeader = document.createElement("div");
+        pastHeader.style.fontWeight = "bold";
+        pastHeader.style.marginTop = "20px";
+        pastHeader.style.marginBottom = "10px";
+        pastHeader.style.fontSize = "15px";
+        pastHeader.style.color = "#777";
+        pastHeader.textContent = `Past Trips - History (${pastTrips.length})`;
+        container.appendChild(pastHeader);
 
-        card.innerHTML = headerHTML + ticketsHTML;
+        pastTrips.forEach((trip) => {
+          const card = createTripCard(trip);
+          card.style.opacity = "0.7";
+          card.style.borderColor = "#bbb";
+          container.appendChild(card);
+        });
+      }
+    }
 
-        container.appendChild(card);
-      });
+    function createTripCard(trip) {
+      const card = document.createElement("div");
+      card.className = "trip-card";
+
+      let headerHTML = `
+        <div class="trip-header">
+          Trip ID: ${trip.tripId || "?"}
+        </div>
+        <div class="small-note" style="margin-bottom:10px;">
+          Connection: ${trip.connectionSummary || ""}
+        </div>
+      `;
+
+      const ticketsHTML = (trip.reservations || [])
+        .map((res, idx) => {
+          const t = res.ticket || {};
+          return `
+            <div class="ticket-line">
+              ${idx+1}. ${res.lastName || ""}, ${res.firstName || ""} (Age ${res.age ?? "?"})
+              <br/>
+              ID: ${res.idNumber || ""} |
+              Ticket #: ${t.ticketId ?? "?"}
+            </div>
+          `;
+        })
+        .join("");
+
+      card.innerHTML = headerHTML + ticketsHTML;
+      return card;
     }
 
     async function fetchTrips(lastName, idNumber) {
@@ -648,7 +682,7 @@
           throw new Error(`HTTP ${resp.status}`);
         }
         const data = await resp.json();
-        renderTrips(data.trips || []);
+        renderTrips(data.currentTrips || [], data.pastTrips || []);
       } catch (err) {
         tripMsg.textContent = `Error: ${err.message || err}`;
         tripMsg.style.display = "block";

@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import csv from "csv-parser";
 import { fileURLToPath } from "url";
+import * as db from "./database.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -142,8 +143,15 @@ function normalizeRow(originalRow) {
   return row;
 }
 
+// Load routes from database into memory for fast searching
 let routes = [];
 let indexByDepart = new Map();
+
+function loadRoutesFromDatabase() {
+  routes = db.getAllRoutes();
+  buildIndex();
+  console.log(`Loaded ${routes.length} routes from database into memory`);
+}
 
 function buildIndex() {
   indexByDepart = new Map();
@@ -208,6 +216,34 @@ function matchesDay(segment, day) {
   return !nonEmpty(day) || segment.days.includes(day.toUpperCase());
 }
 
+/**
+ * Smart layover policy:
+ * - During day hours (6:00-22:00): Allow up to 2 hours (120 minutes)
+ * - After hours (22:00-6:00): Allow up to 30 minutes
+ * Returns true if layover is acceptable
+ * If not respected, no results with this layover will be returned
+ */
+function isLayoverAcceptable(arrivalTime, departureTime) {
+  const layoverMinutes = transferMinutes(
+    { arriveTime: arrivalTime },
+    { departTime: departureTime }
+  );
+
+  // Extract hour from arrival time (format: "HH:MM")
+  const arrivalHour = parseInt(arrivalTime.split(":")[0]);
+
+  // Determine if arrival is during day hours (6:00-22:00)
+  const isDayHours = arrivalHour >= 6 && arrivalHour < 22;
+
+  if (isDayHours) {
+    // Day hours: max 2 hours (120 minutes)
+    return layoverMinutes <= 120;
+  } else {
+    // After hours: max 30 minutes
+    return layoverMinutes <= 30;
+  }
+}
+
 function getStartList(from) {
   const cleanedCity = cleanString(from);
   if (!cleanedCity) return [];
@@ -242,11 +278,14 @@ function oneStopSearch(from, to, day) {
       routes.filter((r) => cleanString(r.from) === midCity);
 
     for (const secondRoute of options) {
+      const layoverMins = transferMinutes(firstRoute, secondRoute);
+      
       if (
         cleanString(secondRoute.arriveCity).includes(cleanedTo) &&
         matchesDay(firstRoute, day) &&
         matchesDay(secondRoute, day) &&
-        transferMinutes(firstRoute, secondRoute) >= minTransferTime
+        layoverMins >= minTransferTime &&
+        isLayoverAcceptable(firstRoute.arriveTime, secondRoute.departTime)
       ) {
         results.push([firstRoute, secondRoute]);
       }
@@ -269,7 +308,9 @@ function twoStopSearch(from, to, day) {
     for (const secondRoute of connectingRoutes1) {
       if (!matchesDay(firstRoute, day) || !matchesDay(secondRoute, day))
         continue;
-      if (transferMinutes(firstRoute, secondRoute) < minTransferTime)
+      
+      const layover1 = transferMinutes(firstRoute, secondRoute);
+      if (layover1 < minTransferTime || !isLayoverAcceptable(firstRoute.arriveTime, secondRoute.departTime))
         continue;
 
       const secondMidCity = cleanString(secondRoute.arriveCity);
@@ -278,10 +319,13 @@ function twoStopSearch(from, to, day) {
         routes.filter((r) => cleanString(r.from) === secondMidCity);
 
       for (const thirdRoute of connectingRoutes2) {
+        const layover2 = transferMinutes(secondRoute, thirdRoute);
+        
         if (
           cleanString(thirdRoute.arriveCity).includes(cleanedTo) &&
           matchesDay(thirdRoute, day) &&
-          transferMinutes(secondRoute, thirdRoute) >= minTransferTime
+          layover2 >= minTransferTime &&
+          isLayoverAcceptable(secondRoute.arriveTime, thirdRoute.departTime)
         ) {
           results.push([firstRoute, secondRoute, thirdRoute]);
         }
@@ -292,7 +336,7 @@ function twoStopSearch(from, to, day) {
 }
 
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, csv: dataFile, routesLoaded: routes.length });
+  res.json({ ok: true, csv: dataFile, routesLoaded: routes.length, dbRouteCount: db.countRoutes() });
 });
 
 app.get("/api/search", (req, res) => {
@@ -320,21 +364,7 @@ app.get("/api/debug/echo", (req, res) => {
   });
 });
 
-let tripsStore = [];
-let tripCounter = 1;
-let ticketCounter = 1;
-
-function makeTripId() {
-  const id = "TRIP-" + tripCounter.toString(36).toUpperCase();
-  tripCounter += 1;
-  return id;
-}
-
-function makeTicketId() {
-  const id = ticketCounter;
-  ticketCounter += 1;
-  return id;
-}
+// Removed in-memory trip storage - now using database
 
 function summarizeConnection(conn) {
   if (!conn || !conn.segments || !conn.segments.length) return "";
@@ -353,62 +383,119 @@ app.post("/api/book", (req, res) => {
     return res.status(400).json({ error: "At least one traveller required." });
   }
 
-  const reservations = travellers.map((t) => {
-    return {
-      firstName: t.firstName?.toString().trim() || "",
-      lastName: t.lastName?.toString().trim() || "",
-      age: Number(t.age) || 0,
-      idNumber: t.idNumber?.toString().trim() || "",
-      ticket: {
-        ticketId: makeTicketId()
-      }
-    };
-  });
+  try {
+    // Add connection summary to the connection object
+    connection.connectionSummary = summarizeConnection(connection);
 
-  const tripId = makeTripId();
+    // Create trip in database
+    const tripId = db.createTrip(connection);
 
-  const trip = {
-    tripId,
-    createdAt: Date.now(),
-    connection,
-    connectionSummary: summarizeConnection(connection),
-    reservations
-  };
+    // Insert trip segments
+    db.insertTripSegments(tripId, connection.segments, connection.transferTimes || []);
 
-  tripsStore.push(trip);
+    // Create reservations and tickets for each traveller
+    const reservations = travellers.map((t) => {
+      const reservationId = db.createReservation(tripId, {
+        firstName: t.firstName?.toString().trim() || "",
+        lastName: t.lastName?.toString().trim() || "",
+        age: Number(t.age) || 0,
+        idNumber: t.idNumber?.toString().trim() || ""
+      });
 
-  res.json({
-    ok: true,
-    tripId,
-    reservationsCount: reservations.length,
-    reservations
-  });
+      const ticketId = db.createTicket(reservationId);
+
+      return {
+        firstName: t.firstName?.toString().trim() || "",
+        lastName: t.lastName?.toString().trim() || "",
+        age: Number(t.age) || 0,
+        idNumber: t.idNumber?.toString().trim() || "",
+        ticket: {
+          ticketId
+        }
+      };
+    });
+
+    res.json({
+      ok: true,
+      tripId,
+      reservationsCount: reservations.length,
+      reservations
+    });
+  } catch (err) {
+    console.error("Booking error:", err);
+    res.status(500).json({ error: "Failed to create booking." });
+  }
 });
 
 app.get("/api/trips", (req, res) => {
-  const lastNameQ = (req.query.lastName || "").toString().trim().toLowerCase();
-  const idNumberQ = (req.query.idNumber || "").toString().trim().toLowerCase();
+  const lastNameQ = (req.query.lastName || "").toString().trim();
+  const idNumberQ = (req.query.idNumber || "").toString().trim();
 
   if (!lastNameQ || !idNumberQ) {
     return res.status(400).json({ error: "Missing lastName or idNumber." });
+  }
+
+  try {
+    // Get trips from database
+    const tripRows = db.getTripsByPassenger(lastNameQ, idNumberQ);
+
+    // Get current date/time for comparison
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+    const currentTrips = [];
+    const pastTrips = [];
+
+    for (const trip of tripRows) {
+      const reservations = db.getReservationsByTrip(trip.trip_id);
+      const segments = db.getTripSegments(trip.trip_id);
+
+      // Get the departure time of the first segment
+      const firstSegment = segments[0];
+      let isPastTrip = false;
+
+      if (firstSegment) {
+        const [depHour, depMinute] = firstSegment.departTime.split(":").map(Number);
+        const departTimeInMinutes = depHour * 60 + depMinute;
+
+        // Simple heuristic: if departure time has passed today, consider it a past trip
+        // Note: This is a simplified version. In production, you'd compare actual dates.
+        isPastTrip = departTimeInMinutes < currentTimeInMinutes;
+      }
+
+      const tripData = {
+        tripId: trip.trip_id,
+        connectionSummary: trip.connection_summary,
+        reservations: reservations.map(r => ({
+          firstName: r.first_name,
+          lastName: r.last_name,
+          age: r.age,
+          idNumber: r.id_number,
+          ticket: {
+            ticketId: r.ticket_id
+          }
+        }))
+      };
+
+      if (isPastTrip) {
+        pastTrips.push(tripData);
+      } else {
+        currentTrips.push(tripData);
+      }
     }
 
-  const found = tripsStore.filter((trip) => {
-    return trip.reservations?.some((r) => {
-      return (
-        r.lastName?.toLowerCase() === lastNameQ &&
-        r.idNumber?.toLowerCase() === idNumberQ
-      );
+    res.json({
+      currentTrips,
+      pastTrips,
+      // Maintain backward compatibility
+      trips: [...currentTrips, ...pastTrips]
     });
-  });
-
-  res.json({
-    trips: found.map((t) => ({
-      tripId: t.tripId,
-      connectionSummary: t.connectionSummary,
-      reservations: t.reservations
-    }))
-  });
+  } catch (err) {
+    console.error("Error fetching trips:", err);
+    res.status(500).json({ error: "Failed to retrieve trips." });
+  }
 });
 
 const FRONTEND_DIR = path.join(__dirname, "..", "frontend");
@@ -445,9 +532,25 @@ function startServer() {
 loadCSV(dataFile)
   .then(({ rows, sep }) => {
     console.log(`CSV read OK from ${dataFile} (detected separator: ${JSON.stringify(sep)})`);
-    routes = rows.map(normalizeRow).filter(Boolean);
-    console.log(`Parsed routes: ${routes.length} / original rows: ${rows.length}`);
-    buildIndex();
+    const parsedRoutes = rows.map(normalizeRow).filter(Boolean);
+    console.log(`Parsed routes: ${parsedRoutes.length} / original rows: ${rows.length}`);
+
+    // Initialize database
+    db.initDatabase();
+
+    // Check if routes already exist in database
+    const existingCount = db.countRoutes();
+    if (existingCount === 0) {
+      console.log("Database is empty. Inserting routes...");
+      db.insertRoutesBatch(parsedRoutes);
+      console.log(`Inserted ${parsedRoutes.length} routes into database`);
+    } else {
+      console.log(`Database already contains ${existingCount} routes. Skipping insert.`);
+    }
+
+    // Load routes from database into memory for searching
+    loadRoutesFromDatabase();
+
     startServer();
   })
   .catch((err) => {
