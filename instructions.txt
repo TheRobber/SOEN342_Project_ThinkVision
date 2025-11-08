@@ -8,7 +8,9 @@ SETUP INSTRUCTIONS:
 
 3) Start system with command: npm run dev
 
-4) Backend running at http://localhost:3001 should appear, click on the link and you will have access to the program
+4) In case of error during npm run dev, make sure to install better-sqlite3 with tis command: npm install better-sqlite3
+
+5) Backend running at http://localhost:3001 should appear, click on the link and you will have access to the program
 
 NOTE: On first run, the database will be automatically created and populated with routes from the CSV file.
 This may take a few seconds. Subsequent runs will use the existing database.
