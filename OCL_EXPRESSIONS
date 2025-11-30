@@ -1,0 +1,115 @@
+# OCL (Object Constraint Language) Expressions - ThinkVision Project
+
+## 1. OCL Expression for Reservation Class
+
+### Class: Reservation
+
+```ocl
+-- File: Reservation.ocl
+-- Context for the Reservation class
+
+context Reservation
+
+  -- Invariant 1: A reservation must always belong to exactly one trip
+  inv belongsToTrip:
+    self.trip->size() = 1
+
+  -- Invariant 2: A reservation must have a valid passenger ID
+  inv validPassengerId:
+    self.idNumber <> null and self.idNumber <> ''
+
+  -- Invariant 3: A reservation must have both first and last names
+  inv hasFullName:
+    self.firstName <> null and self.firstName <> '' and
+    self.lastName <> null and self.lastName <> ''
+
+  -- Invariant 4: Passenger age must be non-negative
+  inv validAge:
+    self.age >= 0
+
+  -- Invariant 5: A reservation must have exactly one associated ticket
+  inv hasOneTicket:
+    self.ticket->size() = 1
+
+  -- Invariant 6: Reservation creation timestamp must be valid (not in future)
+  inv validCreationTime:
+    self.createdAt <= Util.now()
+
+  -- Invariant 7: All reservations for a trip must have unique ID numbers
+  inv uniqueIdInTrip:
+    self.trip.reservations->select(r | r.idNumber = self.idNumber)->size() = 1
+
+  -- Invariant 8: Trip must have at least one reservation
+  inv tripHasReservations:
+    self.trip.reservations->size() >= 1
+```
+
+---
+
+## 2. OCL Expression for createReservation() Method
+
+### Method: ReservationRepository.createReservation()
+
+```ocl
+-- File: ReservationRepository.ocl
+-- Context for the createReservation method
+
+context ReservationRepository::createReservation(tripId: Integer, traveller: Traveller) : Integer
+
+  -- Preconditions (what must be true before calling the method)
+  pre validTripId:
+    tripId > 0
+
+  pre validTravellerData:
+    traveller.firstName <> null and traveller.firstName <> '' and
+    traveller.lastName <> null and traveller.lastName <> '' and
+    traveller.idNumber <> null and traveller.idNumber <> '' and
+    traveller.age >= 0
+
+  pre tripExists:
+    Trip.allInstances()->exists(t | t.tripId = tripId)
+
+  pre noExistingReservation:
+    -- A traveller cannot have duplicate reservations on the same trip
+    Reservation.allInstances()->select(
+      r | r.trip.tripId = tripId and r.idNumber = traveller.idNumber
+    )->size() = 0
+
+  -- Postconditions (what must be true after the method completes)
+  post reservationCreated:
+    Reservation.allInstances()->size() = Reservation.allInstances@pre->size() + 1
+
+  post reservationHasCorrectData:
+    let newReservation = Reservation.allInstances->select(
+      r | r.tripId = tripId and r.idNumber = traveller.idNumber
+    ).first() in
+    newReservation.firstName = traveller.firstName and
+    newReservation.lastName = traveller.lastName and
+    newReservation.age = traveller.age and
+    newReservation.idNumber = traveller.idNumber
+
+  post reservationBelongsToTrip:
+    let newReservation = Reservation.allInstances->select(
+      r | r.tripId = tripId and r.idNumber = traveller.idNumber
+    ).first() in
+    newReservation.trip.tripId = tripId
+
+  post ticketCreatedForReservation:
+    let newReservation = Reservation.allInstances->select(
+      r | r.tripId = tripId and r.idNumber = traveller.idNumber
+    ).first() in
+    newReservation.ticket->size() = 1
+
+  post timestampSet:
+    let newReservation = Reservation.allInstances->select(
+      r | r.tripId = tripId and r.idNumber = traveller.idNumber
+    ).first() in
+    newReservation.createdAt <= Util.now()
+
+  post returnedIdPositive:
+    result > 0
+
+  post returnedIdUnique:
+    -- The returned ID must be unique across all reservations
+    Reservation.allInstances->select(r | r.reservationId = result)->size() = 1
+```
